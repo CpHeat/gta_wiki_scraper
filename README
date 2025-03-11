@@ -1,0 +1,2 @@
+This scraper will get infos about every available vehicle in GTA Online (name, page link, image link, clas, type, body style, capacity, speed, drivetrain and customization options) and create csv and xlsx files
+By default it will not scrape the wiki more than once a week and will store the scraped files locally if you want to get more informations from them.
