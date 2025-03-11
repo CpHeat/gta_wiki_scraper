@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import csv
 import datetime
@@ -9,10 +10,14 @@ import re
 import bs4
 from bs4 import BeautifulSoup
 from openpyxl.workbook import Workbook
+from dotenv import load_dotenv
+
+load_dotenv()
+CACHE_EXPIRATION_IN_HOURS = float(os.getenv('CACHE_EXPIRATION_IN_HOURS'))
 
 # Get page content and save it locally
 def get_page(url:str, output_file:str):
-    print("Scraping url...")
+    print(f"Scraping {url}...")
     page = requests.get(url)
 
 
@@ -51,7 +56,6 @@ def extract_vehicles_list(vehicles_table:str):
             vehicle_link = "https://gta.fandom.com" + vehicle.find("a").get('href')
 
         vehicles_list.append({"name": vehicle_name, "link": vehicle_link})
-    print(vehicles_list)
     return vehicles_list
 
 
@@ -159,6 +163,7 @@ def load_vehicles_infos(vehicles_list:list, vehicle_csv_output:str):
         writer.writeheader()
         for vehicle_data in vehicles_list:
             writer.writerow(vehicle_data)
+    print(f"CSV file created : {vehicle_csv_output}")
 
 
 # Generate a xlsx file with hyperlinks
@@ -187,17 +192,19 @@ def generate_xlsx(csv_file:str, output_xlsx:str):
 
     # Save Excel file
     wb.save(output_xlsx)
-    print(f"Fichier Excel avec hyperliens créé : {output_xlsx}")
+    print(f"Excel file created : {output_xlsx}")
 
 
-def get_cache(cache_file:str, refresh_cache_in_hours:float):
+def get_cache(cache_file:str, CACHE_EXPIRATION_IN_HOURS:float):
     f = open(cache_file, "r")
     cache_timestamp = float(f.read())
     current_timestamp = datetime.datetime.now().timestamp()
-    if cache_timestamp <= (current_timestamp + (refresh_cache_in_hours * 3600)):
+
+    if (cache_timestamp + (CACHE_EXPIRATION_IN_HOURS * 3600)) <= float(current_timestamp):
         print("Cache outdated, let's go scraping...")
         return True
     else:
+        print("Cache is still recent, working with local files...")
         return False
 
 
@@ -209,15 +216,16 @@ def set_cache(cache_file:str):
 
 
 def main():
-    refresh_cache_in_hours:float = 168
+    scraped_folder = "../scraped"
+    output_folder = "../output"
     vehicles_page_url = "https://gta.fandom.com/wiki/Vehicles_in_GTA_Online"
-    Path("scraped/").mkdir(parents=True, exist_ok=True)
-    Path("output/").mkdir(parents=True, exist_ok=True)
-    vehicles_page_output = "scraped/gta_vehicles_page.html"
-    vehicle_csv_output = "output/vehicles.csv"
-    vehicles_xlsx_output = "output/vehicles.xlsx"
+    Path(scraped_folder).mkdir(parents=True, exist_ok=True)
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
+    vehicles_page_output = f"{scraped_folder}/gta_vehicles_page.html"
+    vehicle_csv_output = f"{output_folder}/vehicles.csv"
+    vehicles_xlsx_output = f"{output_folder}/vehicles.xlsx"
     cache_file = "cache.txt"
-    refresh_cache = get_cache(cache_file, refresh_cache_in_hours)
+    refresh_cache = get_cache(cache_file, CACHE_EXPIRATION_IN_HOURS)
 
     modifications_list = [
         "Armor Plating\\n",
@@ -271,7 +279,7 @@ def main():
         # If the vehicle has a page get it and extract the infos
         if vehicle["link"]:
             normalized_filename = normalize_filename(vehicle["name"])
-            scraped_page_filename = f"scraped/{normalized_filename}.html"
+            scraped_page_filename = f"{scraped_folder}/{normalized_filename}.html"
             if refresh_cache:
                 get_page(vehicle["link"], scraped_page_filename)
 
@@ -282,9 +290,8 @@ def main():
             vehicle["body-style"] = vehicle_infos["body-style"]
             vehicle["capacity"] = vehicle_infos["capacity"]
             vehicle["modifications"] = vehicle_infos["modifications"]
-            print(f"Done! {vehicle}")
+            print(f"{vehicle["name"]} done!")
 
-    print(vehicles_list)
     load_vehicles_infos(vehicles_list, vehicle_csv_output)
     generate_xlsx(vehicle_csv_output, vehicles_xlsx_output)
     set_cache(cache_file)

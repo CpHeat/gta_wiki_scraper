@@ -1,0 +1,10 @@
+services:
+  gta-wiki-scraper:
+    build: .
+    container_name: gta-wiki-scraper
+    volumes:
+      - ./output:/app/output/
+      - ./scraped:/app/scraped/
+    command: python main.py
+    environment:
+      - CACHE_EXPIRATION_IN_HOURS=168
