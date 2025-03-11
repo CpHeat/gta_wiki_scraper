@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 CACHE_EXPIRATION_IN_HOURS = float(os.getenv('CACHE_EXPIRATION_IN_HOURS'))
+LOG_LEVEL = os.getenv('LOG_LEVEL')
 
 # Get page content and save it locally
 def get_page(url:str, output_file:str):
@@ -24,6 +25,7 @@ def get_page(url:str, output_file:str):
     f = open(output_file, "w")
     f.write(str(page.content))
     f.close()
+    print(f"Scraping done!")
 
 
 # Normalize filename
@@ -71,43 +73,89 @@ def get_vehicle_class(vehicle_infos):
             vehicle_class = vehicle_class_wrapper.find("a").getText().split(" (")[0]
         else:
             vehicle_class = vehicle_class_wrapper.find("div", class_="pi-font").getText().split(" (")[0]
+        if LOG_LEVEL == "info" : print(f"Class is {vehicle_class}")
+    else:
+        if LOG_LEVEL in (["info", "warn"]): print(f"Class is unknown")
     return vehicle_class
 
 
 def get_vehicle_type(vehicle_infos):
-    vehicle_type = vehicle_type_wrapper = vehicle_infos.find("div", attrs={'data-source': 'type'})
+    vehicle_type_wrapper = vehicle_infos.find("div", attrs={'data-source': 'type'})
     if vehicle_type_wrapper:
         vehicle_type = vehicle_type_wrapper.find("div", class_="pi-data-value").getText()
+        if LOG_LEVEL == "info": print(f"Type is {vehicle_type}")
+    else:
+        vehicle_type = ""
+        if LOG_LEVEL in (["info", "warn"]): print(f"Type is unknown")
     return vehicle_type
 
 
 def get_vehicle_body_style(vehicle_infos):
-    vehicle_body_style = vehicle_body_style_wrapper = vehicle_infos.find("div", attrs={'data-source': 'body_style'})
+    vehicle_body_style_wrapper = vehicle_infos.find("div", attrs={'data-source': 'body_style'})
     if vehicle_body_style_wrapper:
         vehicle_body_style = vehicle_body_style_wrapper.find("div", class_="pi-data-value").getText()
+        if LOG_LEVEL == "info": print(f"Body style is {vehicle_body_style}")
+    else:
+        vehicle_body_style = ""
+        if LOG_LEVEL in (["info", "warn"]): print(f"Body style is unknown")
     return vehicle_body_style
 
 
 def get_vehicle_capacity(vehicle_infos):
     vehicle_capacity_wrapper = vehicle_infos.find("div", attrs={'data-source': 'capacity'})
     if vehicle_capacity_wrapper:
-        return vehicle_capacity_wrapper.find("div", class_="pi-data-value").getText().split(" ")[0]
+        vehicle_capacity = vehicle_capacity_wrapper.find("div", class_="pi-data-value").getText().split(" ")[0]
+        if LOG_LEVEL == "info" : print(f"Capacity is {vehicle_capacity}")
     else:
-        return 0
+        vehicle_capacity = ""
+        if LOG_LEVEL in (["info", "warn"]): print(f"Capacity is unknown")
+    return vehicle_capacity
 
 
-def get_vehicle_handling(soup:bs4.BeautifulSoup):
-    max_velocity_header = soup.find("th", string="Max velocity")
-    if max_velocity_header:
-        row = max_velocity_header.find_parent("tr")
-        if row:
-            vehicle_handling_infos_row = row.find_next_sibling("tr")
-            vehicle_handling_infos = vehicle_handling_infos_row.find_all("td")
-            vehicle_speed = vehicle_handling_infos[0].text.strip("\\n")
-            vehicle_drivetrain = vehicle_handling_infos[3].text.strip("\\n")
-            return vehicle_speed, vehicle_drivetrain
+def get_vehicle_drivetrain(soup:bs4.BeautifulSoup):
+    drivetrain_header_cell = next((th for th in soup.find_all("th") if re.search(r"\b(?:drivetrain)\b", th.get_text(separator=" ", strip=True), re.IGNORECASE)), None)
+    if drivetrain_header_cell:
+        header_row = drivetrain_header_cell.find_parent("tr")
+        if header_row:
+            header_cells = header_row.find_all("th")
+            drivetrain_column = header_cells.index(drivetrain_header_cell)
+            vehicle_drivetrain_infos_row = header_row.find_next_sibling("tr")
+            while vehicle_drivetrain_infos_row and not vehicle_drivetrain_infos_row.find("td"):
+                vehicle_drivetrain_infos_row = vehicle_drivetrain_infos_row.find_next_sibling("tr")
+            vehicle_drivetrain_infos_th = vehicle_drivetrain_infos_row.find_all("th")
+            vehicle_drivetrain_infos = vehicle_drivetrain_infos_row.find_all("td")
+            if vehicle_drivetrain_infos_th:
+                vehicle_drivetrain = vehicle_drivetrain_infos[drivetrain_column - 1].text.strip("\\n")
+            else:
+                vehicle_drivetrain = vehicle_drivetrain_infos[drivetrain_column].text.strip("\\n")
+            if LOG_LEVEL == "info": print(f"Drivetrain is {vehicle_drivetrain}")
+            return vehicle_drivetrain
     else:
-        return "", ""
+        if LOG_LEVEL in (["info", "warn"]): print(f"Drivetrain is unknown")
+        return ""
+
+
+def get_vehicle_speed(soup:bs4.BeautifulSoup):
+    speed_header_cell = next((th for th in soup.find_all("th") if re.search(r"\b(?:velocity|top speed)\b", th.get_text(separator=" ", strip=True), re.IGNORECASE)), None)
+    if speed_header_cell:
+        header_row = speed_header_cell.find_parent("tr")
+        if header_row:
+            header_cells = header_row.find_all("th")
+            speed_column = header_cells.index(speed_header_cell)
+            vehicle_speed_infos_row = header_row.find_next_sibling("tr")
+            while vehicle_speed_infos_row and not vehicle_speed_infos_row.find("td"):
+                vehicle_speed_infos_row = vehicle_speed_infos_row.find_next_sibling("tr")
+            vehicle_speed_infos_th = vehicle_speed_infos_row.find_all("th")
+            vehicle_speed_infos = vehicle_speed_infos_row.find_all("td")
+            if vehicle_speed_infos_th:
+                vehicle_speed = vehicle_speed_infos[speed_column - 1].text.strip("\\n")
+            else:
+                vehicle_speed = vehicle_speed_infos[speed_column].text.strip("\\n")
+            if LOG_LEVEL == "info" : print(f"Speed is {vehicle_speed}")
+            return vehicle_speed
+    else:
+        if LOG_LEVEL in (["info", "warn"]): print(f"Speed is unknown")
+        return ""
 
 
 # Get the number of modifications available
@@ -127,6 +175,7 @@ def get_modifications(soup:bs4.BeautifulSoup, modifications_list:list):
                     modifications[modification.strip("\\n")] = modification_count
 
         modifications["total"] = modifications_count
+        if LOG_LEVEL == "info" : print(f"There is a total of {modifications["total"]} modifications available")
         return modifications
 
 
@@ -140,7 +189,8 @@ def extract_vehicle_infos(vehicle_page:str, modifications_list:list):
         vehicle_type = get_vehicle_type(vehicle_infos)
         vehicle_body_style = get_vehicle_body_style(vehicle_infos)
         vehicle_capacity = get_vehicle_capacity(vehicle_infos)
-        vehicle_speed, vehicle_drivetrain = get_vehicle_handling(soup)
+        vehicle_speed = get_vehicle_speed(soup)
+        vehicle_drivetrain = get_vehicle_drivetrain(soup)
         vehicle_modifications = get_modifications(soup, modifications_list)
 
         return {
@@ -274,7 +324,8 @@ def main():
     processing_start = 0
     processing_stop = None
     for index, vehicle in enumerate(islice(vehicles_list, processing_start, processing_stop)):
-        print(f"Processing {index}: {vehicle}...")
+        print(f"Processing {index}: {vehicle['name']}...")
+        if LOG_LEVEL == "info": print(f"Page: {vehicle["link"]}")
 
         # If the vehicle has a page get it and extract the infos
         if vehicle["link"]:
@@ -290,7 +341,7 @@ def main():
             vehicle["body-style"] = vehicle_infos["body-style"]
             vehicle["capacity"] = vehicle_infos["capacity"]
             vehicle["modifications"] = vehicle_infos["modifications"]
-            print(f"{vehicle["name"]} done!")
+            if LOG_LEVEL == "info" : print(f"{vehicle["name"]} done!")
 
     load_vehicles_infos(vehicles_list, vehicle_csv_output)
     generate_xlsx(vehicle_csv_output, vehicles_xlsx_output)

@@ -7,4 +7,5 @@ services:
       - ./scraped:/app/scraped/
     command: python main.py
     environment:
-      - CACHE_EXPIRATION_IN_HOURS=168
+      - CACHE_EXPIRATION_IN_HOURS = 168
+      - LOG_LEVEL = warn #debug: minimal|info: all logs|warn: only show missing data
