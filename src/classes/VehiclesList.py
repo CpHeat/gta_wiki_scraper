@@ -5,16 +5,16 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 from src.classes.Cache import Cache
-from src.classes.ScrapedList import ScrapedList
 from src.classes.Vehicle import Vehicle
 
 load_dotenv()
 LOG_LEVEL = os.getenv('LOG_LEVEL')
 GENERATE_EXCEL_READY_CSV = os.getenv('GENERATE_EXCEL_READY_CSV')
 
-class VehiclesList(ScrapedList) :
+class VehiclesList() :
     def __init__(self, scraping_page_url: str):
-        super().__init__(scraping_page_url)
+        self.page: str = scraping_page_url
+        self.list: list = []
 
 
     def extract_list(self):
