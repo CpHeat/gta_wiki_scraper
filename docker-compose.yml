@@ -7,5 +7,10 @@ services:
       - ./scraped:/app/scraped/
     command: python main.py
     environment:
-      - CACHE_EXPIRATION_IN_HOURS=168
-      - LOG_LEVEL=warn #debug: minimal|info: all logs|warn: only show missing data
+      - GLOBAL_CACHE_EXPIRATION_IN_HOURS = 24 # Optional (default 24): how many hours before checking back the vehicles list online
+      - VEHICLES_CACHE_EXPIRATION_IN_HOURS = 168 # Optional (default 168): how many hours before checking back every vehicle page online
+      - LOG_LEVEL = warn # Optional (default warn): info is most verbose, warn shows only missing data
+      - SCRAPED_FOLDER = "../scraped" # Optional (default ../scraped): where the scraped pages will be stored for later use
+      - OUTPUT_FOLDER = "../output" # Optional (default ../output): where the CSV file will be stored
+      - GENERATE_EXCEL_READY_CSV = False # Optional (default False): will add formating to easily transform imported data links into working hyperlinks in Excel (mass deleting of an added string will be needed, it will be pretty obvious)
+      - EXCEL_HYPERLINK_FORMAT = "HYPERLINK" # Optional (default HYPERLINK) (only used if GENERATE_EXCEL_READY_CSV=True): the hyperlink prefix your Excel version uses (depends on the language, eg. for french LIEN_HYPERTEXTE)
