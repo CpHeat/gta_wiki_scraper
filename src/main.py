@@ -1,11 +1,8 @@
 import os
 import csv
-import re
 from pathlib import Path
 
-import pandas
 from dotenv import load_dotenv
-from openpyxl.workbook import Workbook
 
 from src.classes.Cache import Cache
 from src.classes.VehiclesList import VehiclesList
