@@ -28,14 +28,12 @@ def load_vehicles_infos(vehicles_list:list, vehicle_csv_output:str):
     print(f"CSV file created : {vehicle_csv_output}")
 
 
-
 def main():
     vehicles_page_url = "https://gta.fandom.com/wiki/Vehicles_in_GTA_Online"
     Path(SCRAPED_FOLDER).mkdir(parents=True, exist_ok=True)
     Path(OUTPUT_FOLDER).mkdir(parents=True, exist_ok=True)
     vehicles_page_output = f"{SCRAPED_FOLDER}/gta_vehicles_page.html"
     vehicle_csv_output = f"{OUTPUT_FOLDER}/vehicles.csv"
-    vehicles_xlsx_output = f"{OUTPUT_FOLDER}/vehicles.xlsx"
 
     # If outdated, get content of the main vehicles page on GTA Wiki
     if Cache.global_refresh_needed():

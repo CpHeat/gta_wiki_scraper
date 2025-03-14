@@ -182,6 +182,8 @@ class Vehicle:
                         for index, modification in enumerate(modification_item):
                             modification_count = self.get_modification(modifications_table, modification)
                             if modification_count > 0:
+                                if "/strict/" in modification:
+                                    modification = modification.replace("\\n/strict/", "")
                                 modifications[modification] = modification_count
                                 if not is_subclass:
                                     modifications_count += modification_count
@@ -189,6 +191,8 @@ class Vehicle:
                                     is_subclass = True
                     else:
                         modification_count = self.get_modification(modifications_table, modification_item)
+                        if "/strict/" in modification_item:
+                            modification_item = modification_item.replace("\\n/strict/", "")
                         if modification_count > 0:
                             modifications[modification_item] = modification_count
                             modifications_count += modification_count

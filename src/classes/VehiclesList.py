@@ -10,6 +10,7 @@ from src.classes.Vehicle import Vehicle
 load_dotenv()
 LOG_LEVEL = os.getenv('LOG_LEVEL')
 GENERATE_EXCEL_READY_CSV = os.getenv('GENERATE_EXCEL_READY_CSV')
+EXCEL_HYPERLINK_FORMAT = os.getenv('EXCEL_HYPERLINK_FORMAT')
 
 class VehiclesList() :
     def __init__(self, scraping_page_url: str):
@@ -52,8 +53,8 @@ class VehiclesList() :
             vehicle = Vehicle(index, vehicle["name"], vehicle["link"])
             vehicle.get_data(scraping_needed=refresh)
             if GENERATE_EXCEL_READY_CSV:
-                link = "=[BATCH_DELETE_THIS]HYPERLINK(\"" + vehicle.link + "\";\"" + vehicle.name + "\")"
-                image_url = "=[BATCH_DELETE_THIS]HYPERLINK(\"" + vehicle.image + "\";\"" + vehicle.name + "\")"
+                link = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.link + "\";\"" + vehicle.name + "\")"
+                image_url = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.image + "\";\"" + vehicle.name + "\")"
             else:
                 link = vehicle.link
                 image_url = vehicle.image
