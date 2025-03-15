@@ -60,13 +60,10 @@ class VehiclesList(ScrapedList):
 
             vehicle = Vehicle(vehicle["name"], vehicle["link"])
             vehicle.get_data(refresh)
-            print("gec", GENERATE_EXCEL_READY_CSV)
             if GENERATE_EXCEL_READY_CSV:
-                print("generate excel ready")
                 link = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.link + "\";\"" + vehicle.name + "\")"
                 image_url = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.image + "\";\"" + vehicle.name + "\")"
             else:
-                print("generate not excel ready")
                 link = vehicle.link
                 image_url = vehicle.image
             self.list["vehicles"][index] = {
