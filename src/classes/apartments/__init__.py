@@ -1,1 +1,0 @@
-__all__ = ["apartment", "apartments_list"]

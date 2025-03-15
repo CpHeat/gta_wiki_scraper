@@ -5,13 +5,14 @@ services:
     volumes:
       - ./output:/app/output/
       - ./scraped:/app/scraped/
-    command: python main.py
+      - ./src:/app/src/
+    command: python -m src.main
     environment:
       - GLOBAL_CACHE_EXPIRATION_IN_HOURS=24 #optional (default 24): how many hours before checking back the vehicles list online
       - VEHICLES_CACHE_EXPIRATION_IN_HOURS=168 #optional (default 168): how many hours before checking back every vehicle page online
       - APARTMENTS_CACHE_EXPIRATION_IN_HOURS=168 #optional (default 168): how many hours before checking back every apartment page online
-      - LOG_LEVEL=warn #optional (default warn): info is most verbose, warn shows only missing data
-      - SCRAPED_FOLDER="../scraped" #optional (default ../scraped): where the scraped pages will be stored for later use
-      - OUTPUT_FOLDER="../output" #optional (default ../output): where the CSV file will be stored
-      - GENERATE_EXCEL_READY_CSV=False #optional (default False): will add formating to easily transform imported data links into working hyperlinks in Excel (mass deleting of an added string will be needed, it will be pretty obvious)
+      - LOG_LEVEL=warn #optional info|warn|debug (default warn): info is most verbose, warn shows only missing data
+      - SCRAPED_FOLDER=scraped #optional (default scraped): where the scraped pages will be stored for later use
+      - OUTPUT_FOLDER=output #optional (default output): where the CSV file will be stored
+      - GENERATE_EXCEL_READY_CSV=False #optional True|False (default False): will add formating to easily transform imported data links into working hyperlinks in Excel (mass deleting of an added string will be needed, it will be pretty obvious)
       - EXCEL_HYPERLINK_FORMAT="HYPERLINK" #optional (default HYPERLINK) (only used if GENERATE_EXCEL_READY_CSV=True): the hyperlink prefix your Excel version uses (depends on the language, eg. for french LIEN_HYPERTEXTE)

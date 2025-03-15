@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from settings import VEHICLES_PAGE_URL, VEHICLES_PAGE_OUTPUT, VEHICLES_CSV_OUTPUT, VEHICLES_FIELDNAMES, \
+from src.settings import VEHICLES_PAGE_URL, VEHICLES_PAGE_OUTPUT, VEHICLES_CSV_OUTPUT, VEHICLES_FIELDNAMES, \
     APARTMENTS_PAGE_URL, APARTMENTS_PAGE_OUTPUT, APARTMENTS_CSV_OUTPUT, APARTMENTS_FIELDNAMES
 from src.classes.apartments.apartments_list import ApartmentsList
 from src.classes.shared.cache import Cache

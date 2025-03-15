@@ -4,14 +4,14 @@ import re
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
-from apartment import Apartment
+from src.classes.apartments.apartment import Apartment
 from src.classes.shared.cache import Cache
 from src.classes.shared.scraped_list import ScrapedList
 from src.settings import APARTMENTS_PAGE_OUTPUT
 
 load_dotenv()
 LOG_LEVEL = os.getenv('LOG_LEVEL')
-GENERATE_EXCEL_READY_CSV = os.getenv('GENERATE_EXCEL_READY_CSV')
+GENERATE_EXCEL_READY_CSV = True if os.getenv('GENERATE_EXCEL_READY_CSV') == "True" else False
 EXCEL_HYPERLINK_FORMAT = os.getenv('EXCEL_HYPERLINK_FORMAT')
 APARTMENTS_CACHE_EXPIRATION_IN_HOURS = int(os.getenv('APARTMENTS_CACHE_EXPIRATION_IN_HOURS'))
 

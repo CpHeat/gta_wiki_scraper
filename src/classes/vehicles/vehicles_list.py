@@ -11,7 +11,7 @@ from src.classes.vehicles.vehicle import Vehicle
 
 load_dotenv()
 LOG_LEVEL = os.getenv('LOG_LEVEL')
-GENERATE_EXCEL_READY_CSV = os.getenv('GENERATE_EXCEL_READY_CSV')
+GENERATE_EXCEL_READY_CSV = True if os.getenv('GENERATE_EXCEL_READY_CSV') == "True" else False
 EXCEL_HYPERLINK_FORMAT = os.getenv('EXCEL_HYPERLINK_FORMAT')
 VEHICLES_CACHE_EXPIRATION_IN_HOURS = int(os.getenv('VEHICLES_CACHE_EXPIRATION_IN_HOURS'))
 
@@ -60,10 +60,13 @@ class VehiclesList(ScrapedList):
 
             vehicle = Vehicle(vehicle["name"], vehicle["link"])
             vehicle.get_data(refresh)
+            print("gec", GENERATE_EXCEL_READY_CSV)
             if GENERATE_EXCEL_READY_CSV:
+                print("generate excel ready")
                 link = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.link + "\";\"" + vehicle.name + "\")"
                 image_url = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.image + "\";\"" + vehicle.name + "\")"
             else:
+                print("generate not excel ready")
                 link = vehicle.link
                 image_url = vehicle.image
             self.list["vehicles"][index] = {
