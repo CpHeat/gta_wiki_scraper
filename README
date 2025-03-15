@@ -1,4 +1,4 @@
-This scraper will get infos about every available vehicle in GTA Online (name, page link, image link, clas, type, body style, capacity, speed, drivetrain and customization options) and create csv and xlsx files
+This scraper will get infos about every available vehicle in GTA Online (name, page link, image link, class, type, body style, capacity, speed (in mph and km/h), drivetrain and customization options) and create a csv file with it
+It will also get every apartment in the game (name, page link, image link, category, style, garage capacity and create a csv file with it.
 By default it will not scrape the wiki more than once a week and will store the scraped files locally if you want to get more informations from them.
-
 You can use it as a docker container : use the example docker-compose provided
