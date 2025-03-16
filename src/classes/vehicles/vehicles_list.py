@@ -1,74 +1,101 @@
-import os
 from itertools import islice
 
-from bs4 import BeautifulSoup
-from dotenv import load_dotenv
-
+from functions.extract import get_soup
 from src.classes.shared.cache import Cache
 from src.classes.shared.scraped_list import ScrapedList
-from src.settings import VEHICLES_PAGE_OUTPUT, VEHICLES_ITERATION_START, VEHICLES_ITERATION_STOP
+from src.settings import LOG_LEVEL, GENERATE_EXCEL_READY_CSV, EXCEL_HYPERLINK_FORMAT, \
+    VEHICLES_PAGE_OUTPUT, VEHICLES_ITERATION_START, VEHICLES_ITERATION_STOP, VEHICLES_CACHE_EXPIRATION_IN_HOURS
 from src.classes.vehicles.vehicle import Vehicle
 
-load_dotenv()
-LOG_LEVEL = os.getenv('LOG_LEVEL')
-GENERATE_EXCEL_READY_CSV = True if os.getenv('GENERATE_EXCEL_READY_CSV') == "True" else False
-EXCEL_HYPERLINK_FORMAT = os.getenv('EXCEL_HYPERLINK_FORMAT')
-VEHICLES_CACHE_EXPIRATION_IN_HOURS = int(os.getenv('VEHICLES_CACHE_EXPIRATION_IN_HOURS'))
 
 class VehiclesList(ScrapedList):
-    def __init__(self):
-        super().__init__()
+    """
+    A class to represent a vehicles list extracted from a webpage.
 
+    Attributes
+    ----------
+    page_url: str
+        Url of the page to scrape for a list of vehicles.
+    output_file: str
+        Path to the local file containing the scraped page.
+    list: dict
+        A list of vehicles
 
-    def extract_list(self):
-        with open(VEHICLES_PAGE_OUTPUT, "r") as file:
-            soup = BeautifulSoup(file, 'html.parser')
+    Methods
+    -------
+    extract_list()
+        Extracts the list of vehicles from the url.
+    extract_data()
+        Extracts individual data for every vehicle in the list that has its own url.
+    """
+    def __init__(self, page_url: str, output_file: str) -> None:
+        """
+        Constructs all the necessary attributes for the VehiclesList object.
 
-        vehicles = soup.find_all("table", class_="wikitable")[-1].find_all("li")
-        vehicles_list = {
+        :param page_url: str
+            Url of the page to scrape for a list of vehicles.
+        :param output_file: str
+            Path to the local file containing the scraped vehicles page.
+        """
+        super().__init__(page_url, output_file)
+
+    def extract_list(self) -> None:
+        """Extracts a list of vehicles from a page."""
+        vehicles = {
             "items": 0,
             "vehicles": []
         }
 
-        # Some vehicles have no link, detect them and scrape them accordingly
+        """Extract the vehicles list from the soup"""
+        soup = get_soup(VEHICLES_PAGE_OUTPUT)
+        vehicles_list = soup.find_all("table", class_="wikitable")[-1].find_all("li")
+
+        """Some vehicles have no link, detect them and scrape them accordingly"""
         items=0
-        for vehicle in vehicles:
+        for vehicle in vehicles_list:
             if vehicle.find("span") and vehicle.find("span").get("data-uncrawlable-url"):
                 vehicle_name = vehicle.find("span").get("title").replace(" (page does not exist)", "")
-                vehicle_link = ""
+                vehicle_page_url = ""
             else:
                 vehicle_name = vehicle.find("a").get('title', 'No title attribute')
-                vehicle_link = "https://gta.fandom.com" + vehicle.find("a").get('href')
+                vehicle_page_url = "https://gta.fandom.com" + vehicle.find("a").get('href')
             items += 1
-            vehicles_list["vehicles"].append({"name": vehicle_name, "link": vehicle_link})
-        vehicles_list["items"] = items
-        self.list = vehicles_list
-        self.check_for_differences()
+            vehicles["vehicles"].append({"name": vehicle_name, "page url": vehicle_page_url})
+        vehicles["items"] = items
+        self.list = vehicles
+        Cache.check_for_differences("vehicles", self.list['items'])
         Cache.set_list_items("vehicles", self.list['items'])
 
 
-    def extract_data(self):
+    def extract_data(self) -> None:
+        """Extracts individual data for every vehicle in the list."""
         if Cache.is_refresh_needed("vehicles_check_timestamp", VEHICLES_CACHE_EXPIRATION_IN_HOURS):
             print("Vehicles cache is outdated, let's go scraping...")
             refresh = True
         else:
             print("Vehicles cache is still up to date, working with it...")
             refresh = False
-        for index, vehicle in enumerate(islice(self.list["vehicles"], VEHICLES_ITERATION_START, VEHICLES_ITERATION_STOP)):
-            print(f"Processing {index}: {vehicle['name']}...")
-            if LOG_LEVEL == "info": print(f"Page: {vehicle["link"]}")
 
-            vehicle = Vehicle(vehicle["name"], vehicle["link"])
-            vehicle.get_data(refresh)
+        """For each vehicle in the list that has a page, extract and store the full data"""
+        for index, item in enumerate(islice(self.list["vehicles"], VEHICLES_ITERATION_START, VEHICLES_ITERATION_STOP)):
+            print(f"Processing {index}: {item['name']}...")
+            if LOG_LEVEL == "info": print(f"Page: {item["link"]}")
+
+            vehicle = Vehicle(item["name"], item["page url"])
+            if item["page url"]:
+                vehicle.get_item_data(refresh)
+
+            """If asked to generate an excel-compatible csv, modify the links"""
             if GENERATE_EXCEL_READY_CSV:
-                link = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.link + "\";\"" + vehicle.name + "\")"
+                page_url = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.page_url + "\";\"" + vehicle.name + "\")"
                 image_url = "=[BATCH_DELETE_THIS]" + EXCEL_HYPERLINK_FORMAT + "(\"" + vehicle.image + "\";\"" + vehicle.name + "\")"
             else:
-                link = vehicle.link
-                image_url = vehicle.image
+                page_url = vehicle.page_url
+                image_url = vehicle.image_url
+
             self.list["vehicles"][index] = {
                 "name": vehicle.name,
-                "link": link,
+                "page url": page_url,
                 "image url": image_url,
                 "category": vehicle.category,
                 "type": vehicle.type,
@@ -81,11 +108,3 @@ class VehiclesList(ScrapedList):
             }
         print("All vehicles data extracted!")
         Cache.set_checked_timestamp("vehicles_check_timestamp", force_refresh=False)
-
-
-    def check_for_differences(self):
-        if Cache.get_list_items("vehicles") != self.list["items"]:
-            if LOG_LEVEL == "debug": print(f"List is different than the cached one, refresh it")
-            Cache.set_checked_timestamp("vehicles_check_timestamp", force_refresh=True)
-        else:
-            return False
