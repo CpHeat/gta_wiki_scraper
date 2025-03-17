@@ -2,8 +2,8 @@ import re
 
 import bs4
 
-from functions.extract import scrape_page, get_normalized_filename, get_soup
-from settings import SCRAPED_FOLDER, LOG_LEVEL, VEHICLES_MODIFICATIONS_LIST
+from src.functions.extract import scrape_page, get_normalized_filename, get_soup
+from src.settings import SCRAPED_FOLDER, LOG_LEVEL, VEHICLES_MODIFICATIONS_LIST
 from src.classes.shared.scraped_item import ScrapedItem
 
 

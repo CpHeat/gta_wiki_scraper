@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from classes.vehicles.vehicles_list import VehiclesList
-from functions.extract import scrape_page
 from src.settings import SCRAPED_FOLDER, OUTPUT_FOLDER, \
     VEHICLES_PAGE_URL, VEHICLES_PAGE_OUTPUT, VEHICLES_CSV_OUTPUT, VEHICLES_FIELDNAMES, \
     APARTMENTS_PAGE_URL, APARTMENTS_PAGE_OUTPUT, APARTMENTS_CSV_OUTPUT, APARTMENTS_FIELDNAMES, \
     GLOBAL_CACHE_EXPIRATION_IN_HOURS, LOG_LEVEL
+from src.functions.load import load_data_to_csv
+from src.functions.extract import scrape_page
+from src.classes.vehicles.vehicles_list import VehiclesList
 from src.classes.apartments.apartments_list import ApartmentsList
 from src.classes.shared.cache import Cache
-from src.functions.load import load_data_to_csv
 
 
 def main() -> None:

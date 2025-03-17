@@ -1,7 +1,7 @@
 import shelve
 from datetime import datetime
 
-from settings import LOG_LEVEL
+from src.settings import LOG_LEVEL
 
 
 class Cache:

@@ -1,6 +1,6 @@
 from itertools import islice
 
-from functions.extract import get_soup
+from src.functions.extract import get_soup
 from src.classes.shared.cache import Cache
 from src.classes.shared.scraped_list import ScrapedList
 from src.settings import LOG_LEVEL, GENERATE_EXCEL_READY_CSV, EXCEL_HYPERLINK_FORMAT, \

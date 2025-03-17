@@ -2,7 +2,7 @@ import re
 
 import bs4
 
-from settings import SCRAPED_FOLDER, LOG_LEVEL
+from src.settings import SCRAPED_FOLDER, LOG_LEVEL
 from src.classes.shared.scraped_item import ScrapedItem
 from src.functions.extract import get_normalized_filename, get_soup, scrape_page
 

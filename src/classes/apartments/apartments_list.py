@@ -1,6 +1,6 @@
 import re
 
-from functions.extract import get_soup
+from src.functions.extract import get_soup
 from src.classes.apartments.apartment import Apartment
 from src.classes.shared.cache import Cache
 from src.classes.shared.scraped_list import ScrapedList
