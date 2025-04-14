@@ -1,10 +1,10 @@
 import re
 
-from src.functions.extract import get_soup
-from src.classes.apartments.apartment import Apartment
-from src.classes.shared.cache import Cache
-from src.classes.shared.scraped_list import ScrapedList
-from src.settings import LOG_LEVEL, GENERATE_EXCEL_READY_CSV, EXCEL_HYPERLINK_FORMAT, \
+from functions.extract import get_soup, get_similar_address_page_url
+from classes.apartments.apartment import Apartment
+from classes.shared.cache import Cache
+from classes.shared.scraped_list import ScrapedList
+from settings import LOG_LEVEL, GENERATE_EXCEL_READY_CSV, EXCEL_HYPERLINK_FORMAT, \
     APARTMENTS_PAGE_OUTPUT, APARTMENTS_CACHE_EXPIRATION_IN_HOURS
 
 
@@ -65,9 +65,11 @@ class ApartmentsList(ScrapedList):
             while i < len(apartments_rows):
                 apartment_cells = apartments_rows[i].find_all("td")
                 apartment_address = apartment_cells[0].get_text().replace("\\n", "")
-                apartment_page = ""
                 if apartment_cells[0].find("a"):
                     apartment_page = "https://gta.fandom.com" + apartment_cells[0].find("a").get("href")
+                else:
+                    apartment_page = get_similar_address_page_url(apartment_address, apartments)
+
                 apartment_price = apartment_cells[1].get_text().replace("\\n", "")
                 apartment_price = self.get_normalized_price(apartment_price)
                 apartment_notes = apartment_cells[2].get_text().replace("\\n", "")

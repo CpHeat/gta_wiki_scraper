@@ -1,10 +1,14 @@
+import os
 import re
 
 import bs4
+import requests
+from PIL import Image
 
-from src.functions.extract import scrape_page, get_normalized_filename, get_soup
-from src.settings import SCRAPED_FOLDER, LOG_LEVEL, VEHICLES_MODIFICATIONS_LIST
-from src.classes.shared.scraped_item import ScrapedItem
+from functions.extract import scrape_page, get_normalized_filename, get_soup
+from settings import SCRAPED_FOLDER, LOG_LEVEL, VEHICLES_MODIFICATIONS_LIST, OUTPUT_FOLDER, \
+    UNAVAILABLE_VEHICLES_PAGE_OUTPUT
+from classes.shared.scraped_item import ScrapedItem
 
 
 class Vehicle(ScrapedItem):
@@ -35,6 +39,12 @@ class Vehicle(ScrapedItem):
         Drivetrain of the vehicle
     modifications: dict
         Dictionary of modifications available for the vehicle
+    model_name: str
+        Name of the in-engine model for the vehicle
+    available: bool
+        Is the vehicle still available for purchase
+    price: str
+        Price of the vehicle
 
     Methods
     -------
@@ -61,6 +71,9 @@ class Vehicle(ScrapedItem):
         self.speed_km: str = ""
         self.drivetrain: str = ""
         self.modifications: dict = {}
+        self.model_name: str = ""
+        self.available: bool = True
+        self.price: str = ""
 
     def get_item_data(self, is_scraping_needed: bool):
         """
@@ -74,6 +87,7 @@ class Vehicle(ScrapedItem):
         if is_scraping_needed:
             scrape_page(self.page_url, scraped_page_filename)
         soup = get_soup(scraped_page_filename)
+        unavailable_vehicles_soup = get_soup(UNAVAILABLE_VEHICLES_PAGE_OUTPUT)
         data_wrapper = soup.find(class_="pi-theme-gta-with-subtitle")
 
         self.image_url = self.get_image_url(data_wrapper)
@@ -84,7 +98,35 @@ class Vehicle(ScrapedItem):
         self.speed_km, self.speed_miles = self.get_speed(soup)
         self.drivetrain = self.get_drivetrain(soup)
         self.modifications = self.get_modifications(soup)
+        self.model_name = self.get_model_name(soup)
+        self.price = self.get_price(data_wrapper)
+
+        self.available = self.get_availability(unavailable_vehicles_soup)
+
+        if self.image_url and is_scraping_needed:
+            self.get_image()
+
         if LOG_LEVEL in ["info", "warn", "debug"]: print(f"{self.name} done!")
+
+    @classmethod
+    def get_model_name(cls, soup: bs4.element.Tag) -> str:
+        """
+        Gets the vehicle's model name from the data wrapper.
+
+        :param soup: bs4.element.Tag
+            The html soup from which to extract the vehicle's model name.
+
+        :returns: The vehicle's model name
+        """
+        vehicle_model_name_th = soup.find("th", string=lambda text: text and "Model name".lower() in text.lower())
+        
+        if vehicle_model_name_th:
+            print("model should exist")
+            vehicle_model_name_table = vehicle_model_name_th.parent.parent
+            vehicle_model_name_row = vehicle_model_name_table.find_all("tr")[1]
+            print(vehicle_model_name_row.find_next("td").get_text().replace("\\n", ""))
+            return vehicle_model_name_row.find_next("td").get_text().replace("\\n", "")
+        return ""
 
     @classmethod
     def get_image_url(cls, data_wrapper: bs4.element.Tag) -> str:
@@ -97,10 +139,41 @@ class Vehicle(ScrapedItem):
         :returns: The vehicle's image url
         """
         vehicle_image_wrapper = data_wrapper.find("figure", attrs={'data-source': re.compile(r'^front_image')})
-        return vehicle_image_wrapper.find("img").get("src")
+        return vehicle_image_wrapper.find("a").get("href")
+
+    def get_availability(self, unavailable_vehicles_soup: bs4.element.Tag) -> bool:
+        if unavailable_vehicles_soup.find(string=lambda text: text and self.name.lower() in text.lower()):
+            return False
+        return True
+
+    def get_image(self):
+        if self.model_name:
+            output_file = OUTPUT_FOLDER + "/vehicles/vehicle images/" + self.model_name
+        else:
+            output_file = OUTPUT_FOLDER + "/vehicles/no model name/" + get_normalized_filename(self.name)
+
+        while True:
+            try:
+                response = requests.get(self.image_url)
+                with open(output_file + ".png", "wb") as file:
+                    file.write(response.content)
+                break
+            except Exception as e:
+                print("exception type", type(e))  # the exception type
+                print("arguments stored in .args", e.args)  # arguments stored in .args
+                print("exception", e)
+                continue
+
+        image = Image.open(output_file +".png")
+        image = image.convert("RGB")
+        image.save(output_file + ".jpg", "JPEG", quality=90)
+
+        os.remove(output_file + ".png")
+
+        print("Image download + conversion done")
 
     @classmethod
-    def get_category(cls, data_wrapper: bs4.element.Tag) -> str:
+    def get_category(cls, data_wrapper: bs4.element.Tag) -> str|None:
         """
         Gets the vehicle's category from the data wrapper.
 
@@ -109,7 +182,7 @@ class Vehicle(ScrapedItem):
 
         :returns: The vehicle's category
         """
-        vehicle_category = vehicle_category_wrapper = data_wrapper.find("div", attrs={
+        vehicle_category_wrapper = data_wrapper.find("div", attrs={
             "data-source": re.compile(r"class", re.I)})
         if vehicle_category_wrapper:
             if vehicle_category_wrapper.find("a"):
@@ -117,9 +190,10 @@ class Vehicle(ScrapedItem):
             else:
                 vehicle_category = vehicle_category_wrapper.find("div", class_="pi-font").getText().split(" (")[0]
             if LOG_LEVEL == "info": print(f"Category is {vehicle_category}")
+            return vehicle_category
         else:
             if LOG_LEVEL in ("info", "warn", "debug"): print(f"Category is unknown")
-        return vehicle_category
+
 
     @classmethod
     def get_type(cls, data_wrapper: bs4.element.Tag) -> str:
@@ -178,7 +252,6 @@ class Vehicle(ScrapedItem):
             if LOG_LEVEL == "warn": print(f"Capacity is unknown")
         return vehicle_capacity
 
-
     @classmethod
     def get_speed(cls, soup: bs4.element.Tag) -> [str|None]:
         """
@@ -222,6 +295,28 @@ class Vehicle(ScrapedItem):
         else:
             if LOG_LEVEL in (["info", "warn"]): print(f"Speed is unknown")
 
+    @classmethod
+    def get_price(cls, data_wrapper: bs4.element.Tag) -> str|None:
+        """
+        Gets the vehicle's price from the data wrapper.
+
+        :param data_wrapper: bs4.element.Tag
+            The html data wrapper from which to extract the vehicle's price.
+
+        :returns: The vehicle's price
+        """
+        vehicle_price_wrapper = data_wrapper.find("div", attrs={'data-source': re.compile(r'^price')})
+        if vehicle_price_wrapper:
+            full_text = vehicle_price_wrapper.get_text(separator=' ', strip=True)
+
+            """ Finds a number containing commas """
+            matches = re.findall(r'\b\d{1,3}(?:,\d{3})+\b', full_text)
+
+            if matches:
+                print("price", matches[-1])
+                return matches[-1]
+
+        return None
 
     @classmethod
     def get_drivetrain(cls, soup: bs4.element.Tag) -> str|None:
@@ -258,7 +353,6 @@ class Vehicle(ScrapedItem):
         else:
             if LOG_LEVEL == "warn": print(f"Drivetrain is unknown")
 
-
     @classmethod
     def get_modifications(cls, soup: bs4.element.Tag):
         """
@@ -266,7 +360,14 @@ class Vehicle(ScrapedItem):
         :param soup: soup from which to extract the vehicle's modifications counts.
         :return: The vehicle's modifications counts
         """
-        modifications = {"total": 0}
+        modifications = {
+            "total": 0,
+            "theoretical total": 0,
+            "detail": {
+                "armor": 6,
+                "roll cage": 7,
+            }
+        }
 
         """
         Search for the modification header cell
@@ -280,31 +381,31 @@ class Vehicle(ScrapedItem):
             modifications["theoretical total"] = len(modifications_table.find_all("tr")) - 1
 
             """For each searchable modification in VEHICLES_MODIFICATIONS_LIST, get its number of rows"""
-            for modification_item in VEHICLES_MODIFICATIONS_LIST:
-                if type(modification_item) == list:
+            for modification_items in VEHICLES_MODIFICATIONS_LIST:
+                if type(modification_items) == list:
                     """
                     if modification_item is a list, check for the first term of the list (which is potentially encompassing)
                     if it exists, treat the other terms as subclasses and don't count them in the total
                     if it doesn't exist, treat the other terms as independent
                     """
                     is_subclass = False
-                    for index, modification in enumerate(modification_item):
-                        modification_count = Vehicle.get_modification(modifications_table, modification)
+                    for index, modification_item in enumerate(modification_items):
+                        modification_count = Vehicle.get_modification(modifications_table, modification_item)
                         if modification_count > 0:
-                            if "/strict/" in modification:
-                                modification = modification.replace("\\n/strict/", "")
-                            modifications[modification] = modification_count
+                            if "/strict/" in modification_item:
+                                modification_item = modification_item.replace("\\n/strict/", "")
+                            modifications["detail"][modification_item] = modification_count
                             if not is_subclass:
                                 modifications_count += modification_count
                             if index == 0:
                                 is_subclass = True
                 else:
-                    modification_count = Vehicle.get_modification(modifications_table, modification_item)
+                    modification_count = Vehicle.get_modification(modifications_table, modification_items)
                     """if the item is defined as /strict/ (search for an exact match) get rid of the /strict/ part for the listing"""
-                    if "/strict/" in modification_item:
-                        modification_item = modification_item.replace("\\n/strict/", "")
+                    if "/strict/" in modification_items:
+                        modification_items = modification_items.replace("\\n/strict/", "")
                     if modification_count > 0:
-                        modifications[modification_item] = modification_count
+                        modifications["detail"][modification_items] = modification_count
                         modifications_count += modification_count
 
             modifications["total"] = modifications_count

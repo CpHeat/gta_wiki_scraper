@@ -1,11 +1,12 @@
 from itertools import islice
 
-from src.functions.extract import get_soup
-from src.classes.shared.cache import Cache
-from src.classes.shared.scraped_list import ScrapedList
-from src.settings import LOG_LEVEL, GENERATE_EXCEL_READY_CSV, EXCEL_HYPERLINK_FORMAT, \
+from functions.extract import get_soup
+from classes.shared.cache import Cache
+from classes.shared.scraped_list import ScrapedList
+from functions.request import api_post_vehicle
+from settings import LOG_LEVEL, GENERATE_EXCEL_READY_CSV, EXCEL_HYPERLINK_FORMAT, \
     VEHICLES_PAGE_OUTPUT, VEHICLES_ITERATION_START, VEHICLES_ITERATION_STOP, VEHICLES_CACHE_EXPIRATION_IN_HOURS
-from src.classes.vehicles.vehicle import Vehicle
+from classes.vehicles.vehicle import Vehicle
 
 
 class VehiclesList(ScrapedList):
@@ -39,7 +40,7 @@ class VehiclesList(ScrapedList):
         """
         super().__init__(page_url, output_file)
 
-    def extract_list(self) -> None:
+    def extract_list(self):
         """Extracts a list of vehicles from a page."""
         vehicles = {
             "items": 0,
@@ -66,8 +67,10 @@ class VehiclesList(ScrapedList):
         Cache.check_for_differences("vehicles", self.list['items'])
         Cache.set_list_items("vehicles", self.list['items'])
 
+        return self
 
-    def extract_data(self) -> None:
+
+    def extract_data(self):
         """Extracts individual data for every vehicle in the list."""
         if Cache.is_refresh_needed("vehicles_check_timestamp", VEHICLES_CACHE_EXPIRATION_IN_HOURS):
             print("Vehicles cache is outdated, let's go scraping...")
@@ -103,8 +106,15 @@ class VehiclesList(ScrapedList):
                 "capacity": vehicle.capacity,
                 "speed (km/h)": vehicle.speed_km,
                 "speed (mph)": vehicle.speed_miles,
+                "price": vehicle.price,
                 "drivetrain": vehicle.drivetrain,
-                "modifications": vehicle.modifications
+                "modifications": vehicle.modifications,
+                "model name": vehicle.model_name,
+                "available": vehicle.available,
             }
+
+            api_post_vehicle(vehicle)
+
+
         print("All vehicles data extracted!")
         Cache.set_checked_timestamp("vehicles_check_timestamp", force_refresh=False)

@@ -43,3 +43,13 @@ def get_soup(local_file: str) -> bs4.element.Tag:
     """
     with open(local_file, "r") as file:
         return BeautifulSoup(file, 'html.parser')
+
+def get_similar_address_page_url(apartment_address: str, apartments: dict) -> str:
+
+    address_base = re.split(r'\s*,\s*', apartment_address)[0].lower()
+
+    for apt in apartments["apartments"]:
+        if address_base in apt["name"].lower():
+            return apt["page url"]
+
+    return ""

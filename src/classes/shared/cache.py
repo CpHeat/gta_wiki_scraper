@@ -1,13 +1,42 @@
 import shelve
 from datetime import datetime
 
-from src.settings import LOG_LEVEL
+from settings import LOG_LEVEL
 
 
 class Cache:
     """Contains all the cache methods."""
     def __init__(self):
         pass
+
+    @classmethod
+    def get_cached_api_tokens(cls) -> dict:
+        """
+        Gets cached API tokens
+
+        :returns: cached API tokens
+        """
+        with shelve.open("cache") as cache:
+            try:
+                return cache["api_tokens"]
+            except KeyError:
+                cache["api_tokens"] = {
+                    "access": "",
+                    "refresh": "",
+                    'access_expires': '',
+                    'refresh_expires': '',
+                }
+                return cache["api_tokens"]
+
+    @classmethod
+    def set_api_tokens(cls, tokens: dict) -> None:
+        """
+        Sets the cached API tokens
+        :param tokens: dict
+            The dict containing all the tokens data
+        """
+        with shelve.open("cache", flag='c', protocol=None, writeback=False) as cache:
+            cache['api_tokens'] = tokens
 
     @classmethod
     def set_checked_timestamp(cls, timestamp_name: str, force_refresh: bool = False) -> None:

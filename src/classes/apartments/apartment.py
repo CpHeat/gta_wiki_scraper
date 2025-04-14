@@ -1,10 +1,13 @@
+import os
 import re
 
 import bs4
+import requests
+from PIL import Image
 
-from src.settings import SCRAPED_FOLDER, LOG_LEVEL
-from src.classes.shared.scraped_item import ScrapedItem
-from src.functions.extract import get_normalized_filename, get_soup, scrape_page
+from settings import SCRAPED_FOLDER, LOG_LEVEL, OUTPUT_FOLDER
+from classes.shared.scraped_item import ScrapedItem
+from functions.extract import get_normalized_filename, get_soup, scrape_page
 
 
 class Apartment(ScrapedItem):
@@ -70,6 +73,10 @@ class Apartment(ScrapedItem):
         self.image_url = self.get_image_url(data_wrapper)
         self.style = self.get_style(data_wrapper)
         self.garage_capacity = self.get_garage_capacity(data_wrapper)
+
+        if self.image_url and is_scraping_needed:
+            self.get_image()
+
         if LOG_LEVEL == "info": print(f"{self.name} done!")
 
     @classmethod
@@ -83,7 +90,30 @@ class Apartment(ScrapedItem):
         :returns: The apartment's image url
         """
         apartment_image_wrapper = data_wrapper.find("figure", attrs={'data-source': re.compile(r'^image')})
-        return apartment_image_wrapper.find("img").get("src")
+        return apartment_image_wrapper.find("a").get("href")
+
+    def get_image(self):
+        output_file = OUTPUT_FOLDER + "/apartments/" + get_normalized_filename(self.name)
+
+        while True:
+            try:
+                response = requests.get(self.image_url)
+                with open(output_file + ".webp", "wb") as file:
+                    file.write(response.content)
+                break
+            except Exception as e:
+                print("exception type", type(e))  # the exception type
+                print("arguments stored in .args", e.args)  # arguments stored in .args
+                print("exception", e)
+                continue
+
+        image = Image.open(output_file +".webp")
+        image = image.convert("RGB")
+        image.save(output_file + ".jpg", "JPEG", quality=90)
+
+        os.remove(output_file + ".webp")
+
+        print("Image download + conversion done")
 
     @classmethod
     def get_style(cls, data_wrapper: bs4.element.Tag) -> str:
